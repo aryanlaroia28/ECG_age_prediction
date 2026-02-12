@@ -5,15 +5,13 @@ from tqdm import tqdm
 import pandas as pd
 from collections import defaultdict
 from scipy.stats import gmean
-
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from tensorboard_logger import Logger
-
-from resnet import resnet50
+from resnet1d_wang_fds import resnet1d_wang_fds
 from loss import *
-from datasets import AgeDB
+from datasets import PTBXLDataset
 from utils import *
 
 import os
@@ -47,10 +45,10 @@ parser.add_argument('--reweight', type=str, default='none', choices=['none', 'sq
 parser.add_argument('--retrain_fc', action='store_true', default=False, help='whether to retrain last regression layer (regressor)')
 
 # training/optimization related
-parser.add_argument('--dataset', type=str, default='agedb', choices=['imdb_wiki', 'agedb'], help='dataset name')
-parser.add_argument('--data_dir', type=str, default='./data', help='data directory')
-parser.add_argument('--model', type=str, default='resnet50', help='model name')
-parser.add_argument('--store_root', type=str, default='checkpoint', help='root path for storing checkpoints, logs')
+parser.add_argument('--dataset', type=str, default='1000_timesteps', choices=["5000_timesteps","1000_timesteps"], help='dataset name') # chnage 
+parser.add_argument('--data_dir', type=str, default='./data', help='data directory') #change 
+parser.add_argument('--model', type=str, default='resnet1d_wang_fds', choices=["resnet1d_wang_fds", "inception1d_fds"], help='model name')
+parser.add_argument('--store_root', type=str, default='checkpoint_inception', help='root path for storing checkpoints, logs')
 parser.add_argument('--store_name', type=str, default='', help='experiment store name')
 parser.add_argument('--gpu', type=int, default=None)
 parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'sgd'], help='optimizer type')
@@ -58,12 +56,12 @@ parser.add_argument('--loss', type=str, default='l1', choices=['mse', 'l1', 'foc
 parser.add_argument('--lr', type=float, default=1e-3, help='initial learning rate')
 parser.add_argument('--epoch', type=int, default=90, help='number of epochs to train')
 parser.add_argument('--momentum', type=float, default=0.9, help='optimizer momentum')
-parser.add_argument('--weight_decay', type=float, default=1e-4, help='optimizer weight decay')
+parser.add_argument('--weight_decay', type=float, default=1e-3, help='optimizer weight decay')
 parser.add_argument('--schedule', type=int, nargs='*', default=[60, 80], help='lr schedule (when to drop lr by 10x)')
-parser.add_argument('--batch_size', type=int, default=256, help='batch size')
-parser.add_argument('--print_freq', type=int, default=10, help='logging frequency')
-parser.add_argument('--img_size', type=int, default=224, help='image size used in training')
-parser.add_argument('--workers', type=int, default=32, help='number of workers used in data loading')
+parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+parser.add_argument('--print_freq', type=int, default=50, help='logging frequency')
+# parser.add_argument('--ecg_downsampliing_factor', type=int, default=1, help='image size used in training')
+parser.add_argument('--workers', type=int, default=20, help='number of workers used in data loading')
 # checkpoints
 parser.add_argument('--resume', type=str, default='', help='checkpoint file path to resume training')
 parser.add_argument('--pretrained', type=str, default='', help='checkpoint file path to load backbone weights')
@@ -120,10 +118,10 @@ def main():
     df_train, df_val, df_test = df[df['split'] == 'train'], df[df['split'] == 'val'], df[df['split'] == 'test']
     train_labels = df_train['age']
 
-    train_dataset = AgeDB(data_dir=args.data_dir, df=df_train, img_size=args.img_size, split='train',
+    train_dataset = PTBXLDataset(data_dir=args.data_dir, df=df_train, split='train',
                           reweight=args.reweight, lds=args.lds, lds_kernel=args.lds_kernel, lds_ks=args.lds_ks, lds_sigma=args.lds_sigma)
-    val_dataset = AgeDB(data_dir=args.data_dir, df=df_val, img_size=args.img_size, split='val')
-    test_dataset = AgeDB(data_dir=args.data_dir, df=df_test, img_size=args.img_size, split='test')
+    val_dataset = PTBXLDataset(data_dir=args.data_dir, df=df_val, split='val')
+    test_dataset = PTBXLDataset(data_dir=args.data_dir, df=df_test, split='test')
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=True, drop_last=False)
@@ -137,7 +135,7 @@ def main():
 
     # Model
     print('=====> Building model...')
-    model = resnet50(fds=args.fds, bucket_num=args.bucket_num, bucket_start=args.bucket_start,
+    model = resnet1d_wang_fds(input_channels=12, fds=args.fds, bucket_num=args.bucket_num, bucket_start=args.bucket_start,
                      start_update=args.start_update, start_smooth=args.start_smooth,
                      kernel=args.fds_kernel, ks=args.fds_ks, sigma=args.fds_sigma, momentum=args.fds_mmt)
     model = torch.nn.DataParallel(model).cuda()
@@ -335,61 +333,51 @@ def validate(val_loader, model, train_labels=None, prefix='Val'):
     return losses_mse.avg, losses_l1.avg, loss_gmean
 
 
-def shot_metrics(preds, labels, train_labels, many_shot_thr=100, low_shot_thr=20):
-    train_labels = np.array(train_labels).astype(int)
 
+
+def shot_metrics(preds, labels, train_labels=None):
     if isinstance(preds, torch.Tensor):
         preds = preds.detach().cpu().numpy()
         labels = labels.detach().cpu().numpy()
-    elif isinstance(preds, np.ndarray):
-        pass
-    else:
+    elif not isinstance(preds, np.ndarray):
         raise TypeError(f'Type ({type(preds)}) of predictions not supported')
-
-    train_class_count, test_class_count = [], []
-    mse_per_class, l1_per_class, l1_all_per_class = [], [], []
-    for l in np.unique(labels):
-        train_class_count.append(len(train_labels[train_labels == l]))
-        test_class_count.append(len(labels[labels == l]))
-        mse_per_class.append(np.sum((preds[labels == l] - labels[labels == l]) ** 2))
-        l1_per_class.append(np.sum(np.abs(preds[labels == l] - labels[labels == l])))
-        l1_all_per_class.append(np.abs(preds[labels == l] - labels[labels == l]))
-
-    many_shot_mse, median_shot_mse, low_shot_mse = [], [], []
-    many_shot_l1, median_shot_l1, low_shot_l1 = [], [], []
-    many_shot_gmean, median_shot_gmean, low_shot_gmean = [], [], []
-    many_shot_cnt, median_shot_cnt, low_shot_cnt = [], [], []
-
-    for i in range(len(train_class_count)):
-        if train_class_count[i] > many_shot_thr:
-            many_shot_mse.append(mse_per_class[i])
-            many_shot_l1.append(l1_per_class[i])
-            many_shot_gmean += list(l1_all_per_class[i])
-            many_shot_cnt.append(test_class_count[i])
-        elif train_class_count[i] < low_shot_thr:
-            low_shot_mse.append(mse_per_class[i])
-            low_shot_l1.append(l1_per_class[i])
-            low_shot_gmean += list(l1_all_per_class[i])
-            low_shot_cnt.append(test_class_count[i])
+    
+    preds = preds.astype(float)
+    labels = labels.astype(float)
+    
+    groups = {
+        'many':   {'mse': [], 'l1': [], 'cnt': 0},   # age <= 30
+        'median': {'mse': [], 'l1': [], 'cnt': 0},   # 30 < age < 60
+        'low':    {'mse': [], 'l1': [], 'cnt': 0},   # age >= 60
+    }
+    
+    for p, y in zip(preds, labels):
+        err = p - y
+        abs_err = abs(err)
+        
+        if y <= 30:
+            g = 'many'
+        elif y < 60:
+            g = 'median'
         else:
-            median_shot_mse.append(mse_per_class[i])
-            median_shot_l1.append(l1_per_class[i])
-            median_shot_gmean += list(l1_all_per_class[i])
-            median_shot_cnt.append(test_class_count[i])
-
-    shot_dict = defaultdict(dict)
-    shot_dict['many']['mse'] = np.sum(many_shot_mse) / np.sum(many_shot_cnt)
-    shot_dict['many']['l1'] = np.sum(many_shot_l1) / np.sum(many_shot_cnt)
-    shot_dict['many']['gmean'] = gmean(np.hstack(many_shot_gmean), axis=None).astype(float)
-    shot_dict['median']['mse'] = np.sum(median_shot_mse) / np.sum(median_shot_cnt)
-    shot_dict['median']['l1'] = np.sum(median_shot_l1) / np.sum(median_shot_cnt)
-    shot_dict['median']['gmean'] = gmean(np.hstack(median_shot_gmean), axis=None).astype(float)
-    shot_dict['low']['mse'] = np.sum(low_shot_mse) / np.sum(low_shot_cnt)
-    shot_dict['low']['l1'] = np.sum(low_shot_l1) / np.sum(low_shot_cnt)
-    shot_dict['low']['gmean'] = gmean(np.hstack(low_shot_gmean), axis=None).astype(float)
-
+            g = 'low'
+        
+        groups[g]['mse'].append(err ** 2)
+        groups[g]['l1'].append(abs_err)
+        groups[g]['cnt'] += 1
+    
+    shot_dict = {}
+    for g in groups:
+        if groups[g]['cnt'] > 0:  
+            shot_dict[g] = {
+                'mse': np.mean(groups[g]['mse']),  
+                'l1': np.mean(groups[g]['l1']),
+                'gmean': gmean(groups[g]['l1']).astype(float)
+            }
+        else:
+            shot_dict[g] = {'mse': np.nan, 'l1': np.nan, 'gmean': np.nan}
+    
     return shot_dict
-
 
 if __name__ == '__main__':
     main()

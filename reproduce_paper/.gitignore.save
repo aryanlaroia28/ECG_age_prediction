@@ -1,0 +1,25 @@
+# --- Large experiment artifacts ---
+data/
+checkpoint/
+log_analysis/
+
+# --- Local analysis scripts ---
+analyze_logs.py
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+
+# --- Logs ---
+*.log
+
+# --- OS / Editor ---
+.DS_Store
+.vscode/
+.idea/
+
