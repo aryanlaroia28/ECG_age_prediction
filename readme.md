@@ -1,1 +1,1 @@
-Lab Based Project - Solving Imbalanced Regression in ECG-Age prediction  
+# model links for ptbxl testing : https://github.com/helme/ecg_ptbxl_benchmarking/tree/master/code/models 

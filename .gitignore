@@ -1,0 +1,18 @@
+# Checkpoints
+checkpoint_inception/
+checkpoint_resnetWang/
+checkpoint*/
+
+# Data
+data/
+
+# Log analysis
+log_analysis/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter notebooks
+.ipynb_checkpoints/

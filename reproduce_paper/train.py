@@ -53,6 +53,15 @@ parser.add_argument('--store_name', type=str, default='', help='experiment store
 parser.add_argument('--gpu', type=int, default=None)
 parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'sgd'], help='optimizer type')
 parser.add_argument('--loss', type=str, default='l1', choices=['mse', 'l1', 'focal_l1', 'focal_mse', 'huber'], help='training loss type')
+# Ranking regularizer related
+parser.add_argument('--ranking', action='store_true', default=False, help='whether to enable ranking regularizer')
+parser.add_argument('--ranking_lambda', type=float, default=0.1, help='ranking regularizer lambda parameter')
+parser.add_argument('--ranking_weight', type=float, default=0.1, help='weight for ranking regularizer loss')
+# ConR related
+parser.add_argument('--conr', action='store_true', default=False, help='whether to enable ConR (Contrastive Regression) loss')
+parser.add_argument('--conr_w', type=float, default=1.0, help='ConR window parameter for positive pairs')
+parser.add_argument('--conr_weight', type=float, default=0.1, help='weight for ConR loss term')
+parser.add_argument('--conr_e', type=float, default=0.01, help='ConR exponential coefficient for label distance weighting')
 parser.add_argument('--lr', type=float, default=1e-3, help='initial learning rate')
 parser.add_argument('--epoch', type=int, default=90, help='number of epochs to train')
 parser.add_argument('--momentum', type=float, default=0.9, help='optimizer momentum')
@@ -88,6 +97,10 @@ if args.fds:
     args.store_name += f'_{args.start_update}_{args.start_smooth}_{args.fds_mmt}'
 if args.retrain_fc:
     args.store_name += f'_retrain_fc'
+if args.ranking:
+    args.store_name += f'_ranking_{args.ranking_lambda}_{args.ranking_weight}'
+if args.conr:
+    args.store_name += f'_conr_{args.conr_w}_{args.conr_weight}_{args.conr_e}'
 args.store_name = f"{args.dataset}_{args.model}{args.store_name}_{args.optimizer}_{args.loss}_{args.lr}_{args.batch_size}"
 
 prepare_folders(args)
@@ -246,11 +259,27 @@ def train(train_loader, model, optimizer, epoch):
         inputs, targets, weights = \
             inputs.cuda(non_blocking=True), targets.cuda(non_blocking=True), weights.cuda(non_blocking=True)
         if args.fds:
-            outputs, _ = model(inputs, targets, epoch)
+            outputs, features = model(inputs, targets, epoch)
         else:
             outputs = model(inputs, targets, epoch)
+            features = None
 
         loss = globals()[f"weighted_{args.loss}_loss"](outputs, targets, weights)
+        
+        # Add ranking regularizer if enabled
+        if args.ranking and features is not None:
+            ranking_loss = ranking_regularizer_loss(features, targets, args.ranking_lambda)
+            loss += args.ranking_weight * ranking_loss
+        
+        # Add ConR loss if enabled
+        if args.conr and features is not None:
+            try:
+                conr_loss = ConR(features, targets, outputs.squeeze(), w=args.conr_w, weights=weights, e=args.conr_e)
+                if not (torch.isnan(conr_loss) or torch.isinf(conr_loss)):
+                    loss += args.conr_weight * conr_loss
+            except Exception as e:
+                print(f"Warning: ConR loss computation failed: {e}. Skipping ConR for this batch.")
+        
         assert not (np.isnan(loss.item()) or loss.item() > 1e6), f"Loss explosion: {loss.item()}"
 
         losses.update(loss.item(), inputs.size(0))

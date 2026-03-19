@@ -1,5 +1,7 @@
 import torch
 import torch.nn.functional as F
+from ranksim import batchwise_ranking_regularizer
+from conr import ConR
 
 
 def weighted_mse_loss(inputs, targets, weights=None):
@@ -46,3 +48,18 @@ def weighted_huber_loss(inputs, targets, weights=None, beta=1.):
         loss *= weights.expand_as(loss)
     loss = torch.mean(loss)
     return loss
+
+
+def ranking_regularizer_loss(features, targets, lambda_val=0.1):
+    """
+    Ranking-based regularizer that aligns feature similarities with label rankings.
+    
+    Args:
+        features: (batch_size, feature_dim) feature embeddings
+        targets: (batch_size,) target labels
+        lambda_val: regularization parameter for the ranking function
+        
+    Returns:
+        Ranking regularizer loss
+    """
+    return batchwise_ranking_regularizer(features, targets, lambda_val)

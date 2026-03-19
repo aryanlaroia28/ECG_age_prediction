@@ -23,6 +23,10 @@ python data/preprocess_agedb.py
 #### Main Files
 
 - `train.py`: main training and evaluation script
+- `loss.py`: loss functions including ranking regularizer
+- `ranking.py`: ranking utility functions and autograd Function
+- `ranksim.py`: batchwise ranking regularizer implementation
+- `conr.py`: Contrastive Regression (ConR) loss implementation
 - `create_agedb.py`: create AgeDB raw meta data
 - `preprocess_agedb.py`: create AgeDB-DIR meta file `agedb.csv` with balanced val/test set
 
@@ -37,6 +41,13 @@ python data/preprocess_agedb.py
 - `--resume`: path to resume checkpoint (for both training and evaluation)
 - `--evaluate`: evaluate only flag
 - `--pretrained`: path to load backbone weights for regressor re-training (RRT)
+- `--ranking`: enable ranking regularizer (aligns feature similarities with label rankings)
+- `--ranking_lambda`: lambda parameter for ranking regularizer (default: 0.1)
+- `--ranking_weight`: weight for ranking regularizer loss term (default: 0.1)
+- `--conr`: enable ConR (Contrastive Regression) loss
+- `--conr_w`: ConR window parameter for positive pairs (default: 1.0)
+- `--conr_weight`: weight for ConR loss term (default: 0.1)
+- `--conr_e`: ConR exponential coefficient for label distance weighting (default: 0.01)
 
 ## Getting Started
 
@@ -97,6 +108,39 @@ To use Gaussian kernel (kernel size: 5, sigma: 2)
 ```bash
 python train.py --fds --fds_kernel gaussian --fds_ks 5 --fds_sigma 2
 ```
+
+#### Train a model with Ranking Regularizer
+
+To enable ranking regularizer with default parameters
+
+```bash
+python train.py --ranking
+```
+
+To enable ranking regularizer with custom lambda and weight parameters
+
+```bash
+python train.py --ranking --ranking_lambda 0.1 --ranking_weight 0.2
+```
+
+The ranking regularizer aligns feature similarities with label rankings, which can help improve generalization by maintaining ordinal relationships in the feature space.
+
+#### Train a model with ConR (Contrastive Regression)
+
+To enable ConR with default parameters
+
+```bash
+python train.py --conr
+```
+
+To enable ConR with custom parameters
+
+```bash
+python train.py --conr --conr_w 1.0 --conr_weight 0.15 --conr_e 0.01
+```
+
+ConR is a contrastive learning approach for regression that leverages both label distances and prediction distances to learn better feature representations.
+
 #### Train a model using LDS + FDS
 ```bash
 python train.py --reweight sqrt_inv --lds --lds_kernel gaussian --lds_ks 5 --lds_sigma 2 --fds --fds_kernel gaussian --fds_ks 5 --fds_sigma 2
