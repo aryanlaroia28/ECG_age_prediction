@@ -28,6 +28,9 @@ from icl_models import (
     predict_knn_context,
     predict_sklearn_baseline,
     predict_sklearn_with_context,
+    load_pfn_model,
+    predict_pfn,
+    PFN_LABEL_GAIN,
 )
 from metrics import shot_metrics, print_shot_results, results_to_row
 
@@ -135,6 +138,16 @@ def run_benchmark(args):
                 continue
             methods.append(('transformer', 'gpt2', strategy))
 
+    # PFN methods
+    if args.run_pfn:
+        for strategy in strategies:
+            strategy = strategy.strip()
+            if not strategy:
+                continue
+            methods.append(('pfn', 'pfn_bo', strategy))
+        # PFN with all context
+        methods.append(('pfn', 'pfn_bo', 'all'))
+
     print(f"\n[Step 3-5] Running {len(methods)} method configurations...")
     print("-" * 100)
 
@@ -225,6 +238,62 @@ def run_benchmark(args):
                 )
                 preds = y_scaler.inverse_transform(preds_norm.reshape(-1, 1)).flatten()
 
+            elif method_type == 'pfn':
+                # PFN (Prior-Fitted Network) in-context prediction
+                pfn_model, pfn_n_dims = load_pfn_model(
+                    args.pfn_model_path, device=str(device)
+                )
+                pfn_in_con_dim = min(pfn_n_dims, X_train.shape[1])
+
+                if strategy == 'all':
+                    # Use entire training set as context
+                    pfn_k = min(X_train.shape[0], 10000)
+                    if X_train.shape[0] > 10000:
+                        print(f"  WARNING: Training set too large ({X_train.shape[0]}), "
+                              f"skipping 'all' strategy.")
+                        continue
+                    ctx_X = X_train
+                    ctx_y = y_train_norm
+                    indices = select_context_vanilla(ctx_X, X_test, k=pfn_k)
+                elif strategy == 'inverse':
+                    # Original paper: concatenate vanilla kNN + inverse-sampled kNN
+                    # Both index into the full X_train
+                    ctx_X = X_train
+                    ctx_y = y_train_norm
+                    vanilla_indices = select_context_vanilla(X_train, X_test, k=k)
+
+                    from sampling_strategies import context_inverse_distribution
+                    selected = context_inverse_distribution(
+                        y_train_norm, random_state=args.seed,
+                    )
+                    inv_knn_indices = select_context_vanilla(
+                        X_train[selected], X_test,
+                        k=min(k, len(selected) - 1),
+                    )
+                    # Map back to original X_train indices
+                    inv_knn_indices = np.array(selected)[inv_knn_indices]
+                    indices = np.concatenate([vanilla_indices, inv_knn_indices], axis=1)
+                    pfn_k = indices.shape[1]
+                else:
+                    ctx_X, ctx_y, indices = build_context(
+                        X_train, y_train_norm, X_test,
+                        strategy=strategy, k=k, random_state=args.seed,
+                    )
+                    pfn_k = k
+                    if indices is None:
+                        indices = select_context_vanilla(ctx_X, X_test, k=pfn_k)
+
+                print(f"  PFN context: {ctx_X.shape[0]} samples, "
+                      f"k={pfn_k}, in_con_dim={pfn_in_con_dim}")
+
+                preds_norm = predict_pfn(
+                    pfn_model, ctx_X, X_test, ctx_y, y_test_norm, indices,
+                    model_n_dims=pfn_n_dims, in_con_dim=pfn_in_con_dim,
+                    in_con_size=pfn_k, label_gain=PFN_LABEL_GAIN,
+                    device=str(device), batch_size=args.pfn_batch_size,
+                )
+                preds = y_scaler.inverse_transform(preds_norm.reshape(-1, 1)).flatten()
+
             else:
                 raise ValueError(f"Unknown method type: {method_type}")
 
@@ -234,6 +303,10 @@ def run_benchmark(args):
             results.append(results_to_row(method_label, shot_dict, seed=args.seed,
                                           extra={'strategy': strategy, 'model': model_name,
                                                  'k': k}))
+
+            # Incremental save after each method
+            csv_path = os.path.join(args.output_dir, f"results_k{k}_seed{args.seed}.csv")
+            pd.DataFrame(results).to_csv(csv_path, index=False)
 
         except Exception as e:
             print(f"  ERROR: {e}")
@@ -254,7 +327,7 @@ def run_benchmark(args):
         existing_cols = [c for c in display_cols if c in results_df.columns]
         print(results_df[existing_cols].to_string(index=False, float_format='%.3f'))
 
-        # Save results
+        # Final save
         csv_path = os.path.join(args.output_dir, f"results_k{k}_seed{args.seed}.csv")
         results_df.to_csv(csv_path, index=False)
         print(f"\nResults saved to {csv_path}")
@@ -294,6 +367,14 @@ def parse_args():
     parser.add_argument('--no_baselines', dest='run_baselines', action='store_false')
     parser.add_argument('--run_transformer', action='store_true', default=False,
                         help='Train and evaluate ICL transformer')
+    parser.add_argument('--run_pfn', action='store_true', default=False,
+                        help='Run PFN (Prior-Fitted Network) in-context prediction')
+    parser.add_argument('--pfn_model_path', type=str,
+                        default=os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                             'models', 'pfn_hebo.pt'),
+                        help='Path to pre-trained PFN model (pfn_hebo.pt)')
+    parser.add_argument('--pfn_batch_size', type=int, default=1,
+                        help='Batch size for PFN inference (1 recommended)')
 
     # Transformer hyperparams
     parser.add_argument('--n_embd', type=int, default=128, help='Transformer embedding dim')

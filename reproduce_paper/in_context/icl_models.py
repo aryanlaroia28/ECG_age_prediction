@@ -3,8 +3,11 @@ In-Context Learning Models for ECG Age Prediction.
 
 Includes:
   - GPT2-based transformer for in-context regression
+  - PFN (Prior-Fitted Network) for in-context regression
   - Traditional baselines (KNN, GradientBoosting, etc.) with context-aware evaluation
 """
+import os
+import sys
 import numpy as np
 import torch
 import torch.nn as nn
@@ -157,6 +160,182 @@ def predict_icl_transformer(model, X_train, X_test, y_train, y_test, indices,
             # Take prediction at the test position (last position)
             pred_test = pred[:, -1].cpu().numpy()
             predictions.append(pred_test)
+
+    return np.concatenate(predictions, axis=0)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# PFN (Prior-Fitted Network) for In-Context Regression
+# ──────────────────────────────────────────────────────────────────────
+
+# Default label gain for PFN (from original IM-Context paper)
+PFN_LABEL_GAIN = 0.1
+
+
+def load_pfn_model(model_path, device='cpu'):
+    """
+    Load a pre-trained PFN model from a .pt file.
+
+    Args:
+        model_path: Path to pfn_hebo.pt
+        device: torch device
+
+    Returns:
+        model: PFN TransformerModel
+        model_n_dims: The model's expected feature dimension
+    """
+    # Ensure pfns4bo is importable (it's packaged alongside this file)
+    pfns4bo_parent = os.path.dirname(os.path.abspath(__file__))
+    if pfns4bo_parent not in sys.path:
+        sys.path.insert(0, pfns4bo_parent)
+
+    model = torch.load(model_path, map_location=device, weights_only=False)
+    model = model.to(device)
+    model.eval()
+
+    # Extract model's native feature dimension from encoder
+    model_n_dims = model.encoder[1].base_encoder.weight.shape[1]
+
+    print(f"  Loaded PFN model from {model_path}")
+    print(f"  PFN model_n_dims: {model_n_dims}")
+    print(f"  PFN criterion: {type(model.criterion).__name__}")
+
+    return model, model_n_dims
+
+
+class PFNTestDataset(Dataset):
+    """
+    Batching dataset for PFN inference (matches original BatchingTestSample).
+
+    For each test sample, constructs context + test and chunks features
+    into blocks of size in_con_dim to fit the PFN's fixed input dimension.
+    Features larger than in_con_dim are split into multiple chunks and
+    predictions are averaged across chunks.
+    """
+    def __init__(self, X_train, X_test, y_train, y_test, indices,
+                 model_n_dims, in_con_dim, in_con_size, label_gain=PFN_LABEL_GAIN):
+        self.X_train = torch.as_tensor(X_train, dtype=torch.float32).unsqueeze(0)
+        self.X_test = torch.as_tensor(X_test, dtype=torch.float32)
+        self.y_train = torch.as_tensor(y_train, dtype=torch.float32)
+        if self.y_train.dim() == 1:
+            self.y_train = self.y_train.unsqueeze(-1)
+        self.y_train = self.y_train.unsqueeze(0)  # (1, N_train, 1)
+        self.y_test = torch.as_tensor(y_test, dtype=torch.float32)
+
+        self.indices = indices
+        self.feature_size = X_train.shape[-1]
+        self.model_n_dims = model_n_dims
+        self.in_con_size = in_con_size
+        self.in_con_dim = in_con_dim
+        self.label_gain = label_gain
+
+        # Compute the correct padded dimension for chunking
+        if self.feature_size <= in_con_dim:
+            self.correct_dim = in_con_dim
+        else:
+            self.correct_dim = (self.feature_size // in_con_dim + 1) * in_con_dim
+
+    def __len__(self):
+        return len(self.X_test)
+
+    def __getitem__(self, idx):
+        # Build context: (1, in_con_size+1, feature_size)
+        x_context = torch.cat(
+            (self.X_train[:, self.indices[idx], :],
+             self.X_test[idx, :].unsqueeze(0).unsqueeze(0)),
+            dim=1,
+        )
+
+        # Pad to correct_dim for even chunking
+        batched_x = torch.zeros(1, self.in_con_size + 1, self.correct_dim)
+        batched_x[:, :, :self.feature_size] = x_context
+
+        # Chunk: permute to (1, correct_dim, seq_len) -> reshape to (n_chunks, in_con_dim, seq_len), permute back
+        batched_x = batched_x.permute(0, 2, 1).reshape(
+            -1, self.in_con_dim, self.in_con_size + 1
+        ).permute(0, 2, 1)
+
+        # Pad chunk dim to model_n_dims
+        plac_hold = torch.zeros(batched_x.shape[0], batched_x.shape[1], self.model_n_dims)
+        plac_hold[:, :, :self.in_con_dim] = batched_x
+        batched_x = plac_hold
+
+        # Labels: (n_chunks, in_con_size+1, 1) with 0 for test position
+        batched_y = torch.cat(
+            (self.label_gain * self.y_train[:, self.indices[idx], :],
+             torch.zeros((1, 1, 1))),
+            dim=1,
+        ).repeat(batched_x.shape[0], 1, 1)
+
+        return batched_x, batched_y
+
+
+def predict_pfn(model, X_train, X_test, y_train, y_test, indices,
+                model_n_dims, in_con_dim=None, in_con_size=15,
+                label_gain=PFN_LABEL_GAIN, device='cpu', batch_size=1):
+    """
+    Run PFN in-context prediction for all test samples.
+
+    The PFN uses a BarDistribution criterion to output a discretized probability
+    distribution, from which we extract the mean prediction.
+
+    Args:
+        model: Pre-trained PFN TransformerModel
+        X_train: (N_train, D) context pool features
+        X_test: (N_test, D) test features
+        y_train: (N_train,) context pool labels (normalized)
+        y_test: (N_test,) test labels (normalized, for reference)
+        indices: (N_test, k) context indices per test sample
+        model_n_dims: PFN model's native feature dimension
+        in_con_dim: Feature chunk size (default: min(model_n_dims, feature_dim))
+        in_con_size: Number of context samples per test point
+        label_gain: Scaling factor for labels (default: 0.1)
+        device: torch device
+        batch_size: Batch size for inference (default: 1 as in original)
+
+    Returns:
+        predictions: (N_test,) numpy array of predictions (in original label scale)
+    """
+    if in_con_dim is None:
+        in_con_dim = min(model_n_dims, X_train.shape[1])
+
+    dataset = PFNTestDataset(
+        X_train, X_test, y_train, y_test, indices,
+        model_n_dims=model_n_dims, in_con_dim=in_con_dim,
+        in_con_size=in_con_size, label_gain=label_gain,
+    )
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+
+    model = model.to(device)
+    model.eval()
+
+    predictions = []
+    with torch.no_grad():
+        for x, y in tqdm(loader, desc="PFN inference"):
+            batch_sz, n_chunks, seq_len, dim = x.shape
+
+            # Flatten batch and chunks: (batch*chunks, seq_len, dim)
+            x = x.view(-1, in_con_size + 1, model_n_dims).float().to(device)
+            # PFN expects (seq_len, batch, dim) format
+            x = x.permute(1, 0, 2)
+
+            y = y.view(-1, in_con_size + 1, 1).float().to(device)
+            y = y.permute(1, 0, 2)
+
+            # PFN forward: outputs logits over BarDistribution bins
+            pred_logits = model((None, x, y), single_eval_pos=in_con_size)
+
+            # Extract mean prediction from the BarDistribution
+            pred_mean = model.criterion.mean(pred_logits.softmax(-1).log_())
+
+            # Reshape: (batch_sz, n_chunks) -> average across chunks
+            pred_mean = pred_mean.view(batch_sz, n_chunks)
+            pred_mean = pred_mean.mean(dim=1).detach().cpu().numpy()
+
+            # Undo label gain
+            pred_mean = pred_mean / label_gain
+
+            predictions.append(pred_mean)
 
     return np.concatenate(predictions, axis=0)
 

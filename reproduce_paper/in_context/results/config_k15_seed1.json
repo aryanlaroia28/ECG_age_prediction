@@ -1,0 +1,22 @@
+{
+  "checkpoint": "checkpoint_resnetWang/1000_timesteps_resnet1d_wang_fds_Vanilla_run1_adam_l1_0.001_64/ckpt.best.pth.tar",
+  "data_dir": "./data",
+  "dataset": "1000_timesteps",
+  "backbone": "resnet1d_wang_fds",
+  "output_dir": "in_context/results",
+  "context_size": 15,
+  "strategies": "vanilla,inverse",
+  "run_baselines": true,
+  "run_transformer": true,
+  "n_embd": 128,
+  "n_layer": 6,
+  "n_head": 4,
+  "transformer_epochs": 30,
+  "transformer_lr": 0.0001,
+  "transformer_batch_size": 64,
+  "episodes_per_epoch": 5000,
+  "seed": 1,
+  "device": "auto",
+  "batch_size": 256,
+  "workers": 4
+}

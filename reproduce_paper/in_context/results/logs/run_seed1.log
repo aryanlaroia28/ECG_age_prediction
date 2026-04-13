@@ -1,0 +1,186 @@
+====================================================================================================
+In-Context Learning for ECG Age Prediction
+Time: 2026-04-08 10:59:40
+====================================================================================================
+Device: cuda
+
+[Step 1] Extracting features from pretrained backbone...
+Loading cached features from in_context/results/cached_features/1000_timesteps_resnet1d_wang_fds_Vanilla_run1_adam_l1_0.001_64_1000_timesteps_features.npz
+  Train: (7566, 128) | Val: (963, 128) | Test: (954, 128)
+  Feature dim: 128
+  Age range: train [2-89], test [3-89]
+
+[Step 2] Normalizing features (StandardScaler + PowerTransformer)...
+  Combined feature dim: 256
+
+[Step 3-5] Running 10 method configurations...
+----------------------------------------------------------------------------------------------------
+
+[1/10] knn
+  Type: sklearn | Strategy: none
+  Overall (n=  954): MSE 130.670 | MAE 8.888 | RMSE 11.431 | G-Mean 5.181
+  Many     (n=  125): MSE 88.837 | MAE 6.114 | RMSE 9.425 | G-Mean 2.957
+  Median   (n=  526): MSE 163.809 | MAE 10.607 | RMSE 12.799 | G-Mean 6.811
+  Few      (n=  303): MSE 90.399 | MAE 7.046 | RMSE 9.508 | G-Mean 4.060
+
+[2/10] gradient_boosting
+  Type: sklearn | Strategy: none
+  Overall (n=  954): MSE 91.714 | MAE 7.472 | RMSE 9.577 | G-Mean 4.809
+  Many     (n=  125): MSE 125.140 | MAE 8.207 | RMSE 11.187 | G-Mean 4.717
+  Median   (n=  526): MSE 84.102 | MAE 7.304 | RMSE 9.171 | G-Mean 4.839
+  Few      (n=  303): MSE 91.137 | MAE 7.462 | RMSE 9.547 | G-Mean 4.797
+
+[3/10] ridge
+  Type: sklearn | Strategy: none
+  Overall (n=  954): MSE 92.365 | MAE 7.520 | RMSE 9.611 | G-Mean 4.970
+  Many     (n=  125): MSE 123.947 | MAE 8.338 | RMSE 11.133 | G-Mean 5.062
+  Median   (n=  526): MSE 81.626 | MAE 7.207 | RMSE 9.035 | G-Mean 4.872
+  Few      (n=  303): MSE 97.978 | MAE 7.727 | RMSE 9.898 | G-Mean 5.107
+
+[4/10] xgboost
+  Type: sklearn | Strategy: none
+  Overall (n=  954): MSE 98.528 | MAE 7.781 | RMSE 9.926 | G-Mean 4.974
+  Many     (n=  125): MSE 120.398 | MAE 7.745 | RMSE 10.973 | G-Mean 4.315
+  Median   (n=  526): MSE 91.376 | MAE 7.680 | RMSE 9.559 | G-Mean 5.109
+  Few      (n=  303): MSE 101.922 | MAE 7.973 | RMSE 10.096 | G-Mean 5.036
+
+[5/10] knn_vanilla
+  Type: knn_context | Strategy: vanilla
+  Overall (n=  954): MSE 114.141 | MAE 8.359 | RMSE 10.684 | G-Mean 5.382
+  Many     (n=  125): MSE 96.321 | MAE 6.706 | RMSE 9.814 | G-Mean 3.842
+  Median   (n=  526): MSE 134.947 | MAE 9.608 | RMSE 11.617 | G-Mean 6.830
+  Few      (n=  303): MSE 85.373 | MAE 6.873 | RMSE 9.240 | G-Mean 4.090
+
+[6/10] ridge_vanilla
+  Type: local_ridge | Strategy: vanilla
+  Overall (n=  954): MSE 113.201 | MAE 8.247 | RMSE 10.640 | G-Mean 5.210
+  Many     (n=  125): MSE 149.733 | MAE 8.732 | RMSE 12.237 | G-Mean 5.029
+  Median   (n=  526): MSE 107.919 | MAE 8.263 | RMSE 10.388 | G-Mean 5.426
+  Few      (n=  303): MSE 107.299 | MAE 8.020 | RMSE 10.359 | G-Mean 4.928
+
+[7/10] knn_inverse
+  Type: knn_context | Strategy: inverse
+  Overall (n=  954): MSE 273.728 | MAE 13.372 | RMSE 16.545 | G-Mean 8.869
+  Many     (n=  125): MSE 128.631 | MAE 7.603 | RMSE 11.342 | G-Mean 4.374
+  Median   (n=  526): MSE 365.816 | MAE 16.426 | RMSE 19.126 | G-Mean 12.353
+  Few      (n=  303): MSE 173.724 | MAE 10.450 | RMSE 13.180 | G-Mean 6.680
+
+[8/10] ridge_inverse
+  Type: local_ridge | Strategy: inverse
+  Overall (n=  954): MSE 216.443 | MAE 11.350 | RMSE 14.712 | G-Mean 7.330
+  Many     (n=  125): MSE 207.984 | MAE 9.997 | RMSE 14.422 | G-Mean 5.956
+  Median   (n=  526): MSE 251.868 | MAE 12.537 | RMSE 15.870 | G-Mean 8.591
+  Few      (n=  303): MSE 158.435 | MAE 9.848 | RMSE 12.587 | G-Mean 6.061
+
+[9/10] gpt2_vanilla
+  Type: transformer | Strategy: vanilla
+  Training ICL Transformer (n_dims=256, n_embd=128, n_layer=6)...
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:   6%|▋         | 1/16 [00:00<00:02,  5.25it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:01,  7.42it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:01,  7.76it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:01,  6.42it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:01,  5.93it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:01<00:01,  6.14it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:01<00:01,  6.74it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:01,  6.93it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:01<00:00,  6.41it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:01<00:00,  6.00it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:01<00:00,  6.13it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:02<00:00,  5.84it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:02<00:00,  6.55it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:02<00:00,  6.18it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  6.72it/s]
+  Epoch 1/30 - Train MSE: 0.2731 | Val MSE: 0.3126
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:   6%|▋         | 1/16 [00:00<00:01,  7.59it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:03,  3.93it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:02,  4.36it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:02,  4.32it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:01<00:02,  4.28it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:01<00:02,  3.90it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:01<00:02,  4.26it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:01<00:01,  4.40it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:02<00:01,  4.34it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:02<00:01,  4.76it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:02<00:00,  5.31it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:02<00:00,  5.69it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:02<00:00,  5.64it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:02<00:00,  5.46it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:03<00:00,  5.12it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:03<00:00,  5.08it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 19.71it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 12.99it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:00, 13.26it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 14.00it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:00<00:00, 14.66it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:00<00:00, 12.23it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:01<00:00, 12.20it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:01<00:00, 13.87it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:01,  8.43it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:01,  6.77it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:01,  7.11it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:01,  9.20it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00,  8.67it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:00,  8.10it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:01<00:00,  6.85it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:01<00:00,  6.29it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:01<00:00,  5.95it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:01<00:00,  6.31it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:01<00:00,  6.87it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:02<00:00,  7.11it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  7.62it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 16.81it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 13.21it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:00, 11.04it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 10.74it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:01<00:00, 13.50it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:01<00:00, 13.48it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:01<00:00, 12.99it/s]
+  Epoch 5/30 - Train MSE: 0.1882 | Val MSE: 0.3039
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:00, 16.99it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:01, 10.49it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:01,  6.96it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:01,  6.70it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:01<00:01,  5.79it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:01,  6.20it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:01<00:01,  5.75it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:01<00:01,  4.90it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:01<00:00,  5.29it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  7.91it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 31.94it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:00<00:00, 44.38it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 42.26it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 42.64it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 37.92it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 42.70it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:00<00:00, 35.13it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 40.59it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 38.24it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 60.81it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 57.49it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 39.18it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 43.77it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 48.52it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 49.34it/s]
+  Epoch 10/30 - Train MSE: 0.1767 | Val MSE: 0.3049
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 27.56it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:00<00:00, 42.89it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 47.89it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 47.90it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:00<00:00, 54.23it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 56.91it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 44.73it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:00<00:00, 62.46it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 55.24it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 43.88it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:00<00:00, 42.42it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 52.70it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 59.81it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 42.99it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 44.41it/s]
+  Epoch 15/30 - Train MSE: 0.1883 | Val MSE: 0.3121
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 55.45it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:00<00:00, 61.24it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 60.86it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00, 73.12it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 65.62it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 66.56it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 36.37it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00, 33.78it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 33.71it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 35.95it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:00<00:00, 94.40it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 76.01it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 45.70it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:00<00:00, 45.65it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 47.36it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 48.42it/s]
+  Epoch 20/30 - Train MSE: 0.1912 | Val MSE: 0.3063
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 36.87it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 38.80it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:00<00:00, 35.37it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 37.44it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 29.72it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 64.18it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 63.67it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 47.19it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 55.92it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 56.72it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 38.71it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 37.71it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 46.65it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 46.50it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 46.82it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:00<00:00, 57.70it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 63.19it/s]
+  Epoch 25/30 - Train MSE: 0.1773 | Val MSE: 0.3145
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 33.11it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:00<00:00, 51.79it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 49.27it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 35.11it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00, 31.63it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 32.84it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 37.15it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 38.17it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 76.09it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 72.32it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:00, 65.97it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:00<00:00, 61.67it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 65.59it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 22.71it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 25.22it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 26.98it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 36.23it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 33.51it/s]
+  Epoch 30/30 - Train MSE: 0.1839 | Val MSE: 0.3098
+  Restored best model (val MSE: 0.3039)
+  Saved model to in_context/results/models/icl_transformer_vanilla_k15_seed1.pt
+ICL Transformer inference:   0%|          | 0/4 [00:00<?, ?it/s]ICL Transformer inference:  50%|█████     | 2/4 [00:00<00:00, 20.00it/s]ICL Transformer inference: 100%|██████████| 4/4 [00:00<00:00, 21.45it/s]
+  Overall (n=  954): MSE 89.477 | MAE 7.423 | RMSE 9.459 | G-Mean 4.842
+  Many     (n=  125): MSE 125.289 | MAE 8.591 | RMSE 11.193 | G-Mean 5.525
+  Median   (n=  526): MSE 72.191 | MAE 6.753 | RMSE 8.497 | G-Mean 4.368
+  Few      (n=  303): MSE 104.712 | MAE 8.105 | RMSE 10.233 | G-Mean 5.483
+
+[10/10] gpt2_inverse
+  Type: transformer | Strategy: inverse
+  Training ICL Transformer (n_dims=256, n_embd=128, n_layer=6)...
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00, 74.42it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 26.02it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 28.83it/s]
+  Epoch 1/30 - Train MSE: 0.2185 | Val MSE: 0.6840
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 32.94it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 40.66it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 55.32it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 29.78it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:00, 33.84it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 40.29it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 44.55it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 28.22it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:00<00:00, 49.88it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 56.02it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00, 73.90it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 50.38it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 52.86it/s]
+  Epoch 5/30 - Train MSE: 0.0447 | Val MSE: 0.5877
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:   6%|▋         | 1/16 [00:00<00:01,  8.93it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:01,  7.64it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:01,  7.41it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:02,  5.23it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:02,  4.91it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:01<00:02,  4.87it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:01<00:01,  5.56it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:01<00:01,  6.05it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:01,  5.59it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:01<00:00,  6.68it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:02<00:00,  5.85it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:02<00:00,  4.99it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:02<00:00,  5.11it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:02<00:00,  5.77it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  6.07it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:01,  9.68it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:01, 10.50it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 10.32it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:01,  7.94it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:00,  7.54it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:01<00:00,  7.22it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:01<00:00,  7.60it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:01<00:00,  6.95it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:01<00:00,  6.04it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:02<00:00,  5.85it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  7.61it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 24.03it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:00, 27.00it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:00<00:00, 24.23it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:00<00:00, 25.25it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 28.35it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 28.17it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:00, 30.91it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:00<00:00, 30.26it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 31.53it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 32.69it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:   6%|▋         | 1/16 [00:00<00:01,  7.87it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 16.15it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00, 22.40it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 27.87it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 27.99it/s]
+  Epoch 10/30 - Train MSE: 0.0442 | Val MSE: 0.5709
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 33.56it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 38.99it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:00<00:00, 35.83it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 35.48it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 29.43it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00, 31.62it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:00<00:00, 41.95it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 40.87it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 43.70it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:00<00:00, 44.75it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 45.99it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 48.15it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:00, 57.62it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:00<00:00, 61.59it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 65.30it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 40.00it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 44.84it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 42.09it/s]
+  Epoch 15/30 - Train MSE: 0.0384 | Val MSE: 0.5156
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 30.90it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 30.47it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 44.40it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 40.15it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:01,  7.73it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:01,  7.50it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:01, 10.64it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:00<00:00, 18.41it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 30.08it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 21.61it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:   6%|▋         | 1/16 [00:00<00:03,  4.06it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:03,  4.61it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:02,  4.82it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:02,  4.69it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:01,  5.70it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:01<00:01,  5.53it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:01<00:01,  4.71it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:01<00:01,  4.23it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:01,  4.11it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:02<00:01,  4.11it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:02<00:01,  4.97it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:02<00:00,  5.59it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:02<00:00,  7.17it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  5.84it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:01, 12.92it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:01, 10.56it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 10.20it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00,  9.95it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:01<00:00,  8.78it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:01<00:00,  7.62it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:01<00:00,  6.37it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:01<00:00,  5.61it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:02<00:00,  4.95it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  7.23it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:01, 11.37it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:01, 10.76it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:01,  8.95it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:01,  8.29it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:01,  7.57it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:01<00:00,  7.82it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:01<00:00,  7.69it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:01<00:00,  7.13it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:01<00:00,  6.68it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:01<00:00,  6.51it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  7.98it/s]
+  Epoch 20/30 - Train MSE: 0.0304 | Val MSE: 0.4900
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:01, 12.33it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:01, 10.46it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:01,  8.02it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:01<00:01,  6.66it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:01,  5.77it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:01<00:01,  5.22it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:01<00:01,  4.91it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:01<00:00,  5.03it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:02<00:00,  5.82it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:02<00:00,  5.50it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  6.80it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:01, 10.52it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:01,  7.63it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:01,  7.55it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:00<00:01,  7.17it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:01<00:01,  5.42it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:01,  5.69it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:01<00:01,  5.89it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:01<00:00,  5.12it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:02<00:00,  5.21it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:02<00:00,  5.45it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:02<00:00,  5.54it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:02<00:00,  5.69it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:02<00:00,  6.31it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:   6%|▋         | 1/16 [00:00<00:02,  5.45it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:02,  5.46it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:02,  5.84it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:02,  5.63it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:01,  5.63it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:01<00:01,  5.15it/s]ICL Transformer inference:  44%|████▍     | 7/16 [00:01<00:01,  5.70it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:01<00:01,  4.92it/s]ICL Transformer inference:  56%|█████▋    | 9/16 [00:01<00:01,  4.45it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:02<00:01,  4.24it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:02<00:01,  3.73it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:02<00:01,  3.82it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:02<00:00,  4.33it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:02<00:00,  5.03it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:03<00:00,  5.17it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:03<00:00,  5.13it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  19%|█▉        | 3/16 [00:00<00:00, 21.10it/s]ICL Transformer inference:  50%|█████     | 8/16 [00:00<00:00, 34.71it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:00<00:00, 40.94it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 38.95it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 43.55it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:00<00:00, 37.73it/s]ICL Transformer inference:  94%|█████████▍| 15/16 [00:00<00:00, 42.24it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 43.14it/s]
+  Epoch 25/30 - Train MSE: 0.0236 | Val MSE: 0.4937
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 58.26it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 57.24it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 56.63it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 49.31it/s]ICL Transformer inference:  75%|███████▌  | 12/16 [00:00<00:00, 60.84it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 52.09it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  31%|███▏      | 5/16 [00:00<00:00, 44.40it/s]ICL Transformer inference:  81%|████████▏ | 13/16 [00:00<00:00, 62.24it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 58.56it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:00, 14.88it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 16.62it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 16.95it/s]ICL Transformer inference:  62%|██████▎   | 10/16 [00:00<00:00, 24.98it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 30.27it/s]
+ICL Transformer inference:   0%|          | 0/16 [00:00<?, ?it/s]ICL Transformer inference:  12%|█▎        | 2/16 [00:00<00:01, 12.99it/s]ICL Transformer inference:  25%|██▌       | 4/16 [00:00<00:00, 15.97it/s]ICL Transformer inference:  38%|███▊      | 6/16 [00:00<00:00, 16.28it/s]ICL Transformer inference:  69%|██████▉   | 11/16 [00:00<00:00, 27.07it/s]ICL Transformer inference:  88%|████████▊ | 14/16 [00:00<00:00, 27.00it/s]ICL Transformer inference: 100%|██████████| 16/16 [00:00<00:00, 20.34it/s]
+  Epoch 30/30 - Train MSE: 0.0284 | Val MSE: 0.4833
+  Restored best model (val MSE: 0.4701)
+  Saved model to in_context/results/models/icl_transformer_inverse_k15_seed1.pt
+ICL Transformer inference:   0%|          | 0/4 [00:00<?, ?it/s]ICL Transformer inference:  25%|██▌       | 1/4 [00:00<00:01,  2.68it/s]ICL Transformer inference:  50%|█████     | 2/4 [00:01<00:01,  1.88it/s]ICL Transformer inference:  75%|███████▌  | 3/4 [00:02<00:00,  1.32it/s]ICL Transformer inference: 100%|██████████| 4/4 [00:02<00:00,  1.36it/s]ICL Transformer inference: 100%|██████████| 4/4 [00:02<00:00,  1.46it/s]
+  Overall (n=  954): MSE 142.271 | MAE 9.388 | RMSE 11.928 | G-Mean 6.145
+  Many     (n=  125): MSE 122.637 | MAE 7.791 | RMSE 11.074 | G-Mean 4.577
+  Median   (n=  526): MSE 148.449 | MAE 9.852 | RMSE 12.184 | G-Mean 6.785
+  Few      (n=  303): MSE 139.647 | MAE 9.240 | RMSE 11.817 | G-Mean 5.843
+
+====================================================================================================
+RESULTS SUMMARY
+====================================================================================================
+           method  overall_mse  overall_l1  overall_gmean  many_l1  median_l1  few_l1  many_gmean  median_gmean  few_gmean
+              knn      130.670       8.888          5.181    6.114     10.607   7.046       2.957         6.811      4.060
+gradient_boosting       91.714       7.472          4.809    8.207      7.304   7.462       4.717         4.839      4.797
+            ridge       92.365       7.520          4.970    8.338      7.207   7.727       5.062         4.872      5.107
+          xgboost       98.528       7.781          4.974    7.745      7.680   7.973       4.315         5.109      5.036
+      knn_vanilla      114.141       8.359          5.382    6.706      9.608   6.873       3.842         6.830      4.090
+    ridge_vanilla      113.201       8.247          5.210    8.732      8.263   8.020       5.029         5.426      4.928
+      knn_inverse      273.728      13.372          8.869    7.603     16.426  10.450       4.374        12.353      6.680
+    ridge_inverse      216.443      11.350          7.330    9.997     12.537   9.848       5.956         8.591      6.061
+     gpt2_vanilla       89.477       7.423          4.842    8.591      6.753   8.105       5.525         4.368      5.483
+     gpt2_inverse      142.271       9.388          6.145    7.791      9.852   9.240       4.577         6.785      5.843
+
+Results saved to in_context/results/results_k15_seed1.csv

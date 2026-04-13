@@ -57,10 +57,12 @@ echo "Backbone:    $BACKBONE"
 
 # ── Parse arguments ──
 WITH_TRANSFORMER=false
+WITH_PFN=false
 QUICK=false
 for arg in "$@"; do
     case $arg in
         --with-transformer) WITH_TRANSFORMER=true ;;
+        --with-pfn)         WITH_PFN=true ;;
         --quick)            QUICK=true ;;
     esac
 done
@@ -83,6 +85,11 @@ if $WITH_TRANSFORMER; then
     TRANSFORMER_ARGS="--transformer_epochs 30 --episodes_per_epoch 5000"
 fi
 
+PFN_FLAG=""
+if $WITH_PFN; then
+    PFN_FLAG="--run_pfn"
+fi
+
 for SEED in 0 1 2; do
     echo ""
     echo "--- Seed $SEED ---"
@@ -96,7 +103,8 @@ for SEED in 0 1 2; do
         --strategies "$STRATEGIES" \
         --seed "$SEED" \
         $TRANSFORMER_FLAG \
-        $TRANSFORMER_ARGS
+        $TRANSFORMER_ARGS \
+        $PFN_FLAG
 
     if $QUICK; then
         break  # Only one seed for quick mode
